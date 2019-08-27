@@ -11,36 +11,39 @@ module_constants = {item[0]: item[1] for item in getmembers(math) if isinstance(
 module_functions = {item[0]: item[1] for item in getmembers(math) if callable(item[1])}
 module_functions.update({'abs': abs, 'round': round})
 
-priorities = {'==': 0, '!=': 0, '<': 0, '>': 0, '<=': 0, '>=': 0, '(': 0, ')': 0,
+precedence = {'==': 0, '!=': 0, '<': 0, '>': 0, '<=': 0, '>=': 0, '(': 0, ')': 0,
               '+': 1, '-': 1, '*': 2, '/': 2, '//': 2, '%': 2, '^': 3, '-u': 4}
 arithmetical_operations = {'+': add, '-': sub, '*': mul, '/': truediv, '//': floordiv, '%': mod, '^': pow, '-u': 0}
 comparison_operations = {'==': eq, '!=': ne, '<': lt, '>': gt, '<=': le, '>=': ge}
+right_associative = {'^'}
 
 
 def parse_expression(expression: str) -> list:
-    converted_string = re.split(re.compile(r'([\s(),<>+%*^-]|/{1,2}|[!><=]=)'), expression)
+    """ Parse input string via regular expressions, then remove blank spaces and empty elements left by re.split """
+    converted_string = re.split(re.compile(r'([!><=]=|[\s(),<>+%*^-]|/{1,2})'), expression)
     return list(filter(None, [item.replace(' ', '') for item in converted_string]))
 
 
 def process_negative_numbers(expression: list) -> list:
+    """ Remove unnecessary sign tokens and replace unary minuses with '-u' token """
     index = 0
     minus_counter = 0
     sign_counter = 0
     while index < len(expression):
         if expression[index] == '-':
-            minus_counter += 1
-            sign_counter += 1
+            minus_counter += 1  # number of minuses encountered before token
+            sign_counter += 1  # total number of signs before token; needed to cut unnecessary signs
         elif expression[index] == '+':
             sign_counter += 1
         elif sign_counter != 0:
             expression = expression[:index + 1 - sign_counter] + expression[index:]
             index -= sign_counter
-            if minus_counter % 2 == 0:
+            if minus_counter % 2 == 0:  # if number of minuses is even, replace with plus
                 expression[index] = '+'
             else:
                 expression[index] = '-'
             if index - 1 < 0 or expression[index - 1] in arithmetical_operations or \
-                    expression[index - 1] == '(' or expression[index - 1] == ',':
+                    expression[index - 1] == '(' or expression[index - 1] == ',':  # in this case change minus to unary
                 if expression[index] == '-':
                     expression[index] = '-u'
                 else:
@@ -52,19 +55,25 @@ def process_negative_numbers(expression: list) -> list:
 
 
 def expression_to_rpn(expression: list):
+    """ Convert infix to reverse polish (postfix) notation using shunting-yard algorithm """
     result_stack = []
     operator_stack = []
 
     for index, token in enumerate(expression):
-        try:
+        try:  # check if token is number by attempting to convert it; if successful - continue to next iteration
             result_stack.append(float(token))
             continue
         except (OverflowError, ValueError):
             pass
 
         if token in arithmetical_operations:
-            while operator_stack and priorities[operator_stack[-1]] >= priorities[token]:
-                result_stack.append(operator_stack.pop())
+            while operator_stack:
+                if token in right_associative and not precedence[operator_stack[-1]] > precedence[token]:
+                    break
+                elif not precedence[operator_stack[-1]] >= precedence[token]:
+                    break
+                else:
+                    result_stack.append(operator_stack.pop())
             operator_stack.append(token)
         elif token in comparison_operations:
             while operator_stack and operator_stack[-1] != '(' and operator_stack[-1] != ',':
@@ -72,7 +81,7 @@ def expression_to_rpn(expression: list):
             operator_stack.append(token)
         elif token in module_constants:
             result_stack.append(getattr(math, token))
-        elif token in module_functions:
+        elif token in module_functions:  # functions are stored in list, first element - name, second - number of args
             if expression[index+1] != '(':
                 print("ERROR: no opening bracket after function")
                 return
@@ -90,7 +99,7 @@ def expression_to_rpn(expression: list):
             operator_stack.pop()
             if operator_stack and operator_stack[-1][0] in module_functions:
                 result_stack.append(operator_stack.pop())
-        elif token == ',':
+        elif token == ',':  # count number of commas to find number of arguments of function
             while operator_stack and operator_stack[-1] != '(':
                 result_stack.append(operator_stack.pop())
             last_function_index = 1
@@ -106,9 +115,10 @@ def expression_to_rpn(expression: list):
 
 
 def calculate_rpn_expression(rpn_expression: list):
+    """ Calculate an expression in reverse polish notation """
     index = 0
     while len(rpn_expression) > 1:
-        if type(rpn_expression[index]) is list:
+        if type(rpn_expression[index]) is list:  # process functions
             operation = module_functions[rpn_expression[index][0]]
             function_arguments = []
             number_of_arguments = rpn_expression[index][1]
@@ -120,7 +130,7 @@ def calculate_rpn_expression(rpn_expression: list):
             rpn_expression = rpn_expression[:index-rpn_expression[index][1]] + [result_of_operation] \
                 + rpn_expression[index + 1:]
             index = index - number_of_arguments
-        elif rpn_expression[index] == '-u':
+        elif rpn_expression[index] == '-u':  # process unary minuses
             rpn_expression[index - 1] = -rpn_expression[index - 1]
             rpn_expression = rpn_expression[:index] + rpn_expression[index + 1:]
             index -= 1
@@ -144,7 +154,6 @@ def main():
     parser = argparse.ArgumentParser(description='Pure-python command line calculator')
     parser.add_argument("EXPRESSION", help="expression to be processed")
     args = parser.parse_args()
-
     string_from_command_line = args.EXPRESSION
 
     list_expression = parse_expression(string_from_command_line)
