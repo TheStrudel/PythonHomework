@@ -117,8 +117,8 @@ def calculate_rpn_expression(rpn_expression: list):
                 function_arguments.append(rpn_expression[index - ind])
                 ind -= 1
             result_of_operation = operation(*function_arguments)
-            rpn_expression = rpn_expression[:index-rpn_expression[index][1]] \
-                             + [result_of_operation] + rpn_expression[index + 1:]
+            rpn_expression = rpn_expression[:index-rpn_expression[index][1]] + [result_of_operation] \
+                + rpn_expression[index + 1:]
             index = index - number_of_arguments
         elif rpn_expression[index] == '-u':
             rpn_expression[index - 1] = -rpn_expression[index - 1]
@@ -153,4 +153,5 @@ def main():
     print(calculate_rpn_expression(expression_to_rpn(list_expression)))
 
 
-main()
+if __name__ == '__main__':
+    main()
