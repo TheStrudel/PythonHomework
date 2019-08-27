@@ -145,7 +145,7 @@ def main():
     parser.add_argument("EXPRESSION", help="expression to be processed")
     args = parser.parse_args()
 
-    string_from_command_line = args.expression
+    string_from_command_line = args.EXPRESSION
 
     list_expression = parse_expression(string_from_command_line)
     list_expression = process_negative_numbers(list_expression)
