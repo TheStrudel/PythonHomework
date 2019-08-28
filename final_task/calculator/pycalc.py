@@ -157,7 +157,7 @@ def calculate_rpn_expression(rpn_expression: list):
         else:
             index += 1
 
-    if rpn_expression[0] is not bool or rpn_expression[0] is not float:
+    if not isinstance(rpn_expression[0], Number) and not isinstance(rpn_expression[0], bool):
         raise Exception('Incorrect expression')
     return rpn_expression.pop()
 
