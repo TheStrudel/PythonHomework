@@ -1,6 +1,6 @@
 import unittest
 import math
-from final_task.calculator.pycalc import parse_expression, calculate
+from calculator.pycalc import parse_expression, calculate
 
 
 class TestPycalc(unittest.TestCase):
