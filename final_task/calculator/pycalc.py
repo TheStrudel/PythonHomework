@@ -3,8 +3,7 @@ from numbers import Number
 from inspect import getmembers
 import re
 import math
-from operator import (add, sub, truediv, floordiv, mul, mod, pow,
-                      eq, ne, lt, gt, le, ge)
+from operator import add, sub, truediv, floordiv, mul, mod, pow, eq, ne, lt, gt, le, ge
 
 
 module_constants = {item[0]: item[1] for item in getmembers(math) if isinstance(item[1], Number)}
@@ -20,6 +19,8 @@ right_associative = {'^'}
 
 def parse_expression(expression: str) -> list:
     """ Parse input string via regular expressions, then remove blank spaces and empty elements left by re.split """
+    if not expression:
+        raise Exception('Empty expression')
     converted_string = re.split(re.compile(r'([!><=]=|[\s(),<>+%*^-]|/{1,2})'), expression)
     return list(filter(None, [item.replace(' ', '') for item in converted_string]))
 
@@ -81,10 +82,9 @@ def expression_to_rpn(expression: list):
             operator_stack.append(token)
         elif token in module_constants:
             result_stack.append(getattr(math, token))
-        elif token in module_functions:  # functions are stored in list, first element - name, second - number of args
+        elif token in module_functions:  # functions are stored in lists, first element - name, second - number of args
             if expression[index+1] != '(':
-                print("ERROR: no opening bracket after function")
-                return
+                raise Exception("ERROR: no opening bracket after function")
             else:
                 operator_stack.append([token, 1])
         elif token == '(':
@@ -94,8 +94,7 @@ def expression_to_rpn(expression: list):
             while operator_stack and operator_stack[-1] != '(':
                 result_stack.append(operator_stack.pop())
             if not operator_stack:
-                print("ERROR: incorrect brackets")
-                return
+                raise Exception("ERROR: incorrect brackets")
             operator_stack.pop()
             if operator_stack and operator_stack[-1][0] in module_functions:
                 result_stack.append(operator_stack.pop())
@@ -107,8 +106,7 @@ def expression_to_rpn(expression: list):
                 last_function_index += 1
             operator_stack[-last_function_index][1] += 1
         else:
-            print("ERROR: unknown operation", token)
-            return
+            raise Exception("ERROR: unknown operation", token)
 
     result_stack.extend(reversed(operator_stack))
     return result_stack
@@ -119,35 +117,55 @@ def calculate_rpn_expression(rpn_expression: list):
     index = 0
     while len(rpn_expression) > 1:
         if type(rpn_expression[index]) is list:  # process functions
-            operation = module_functions[rpn_expression[index][0]]
-            function_arguments = []
-            number_of_arguments = rpn_expression[index][1]
-            ind = number_of_arguments
-            while ind > 0:
-                function_arguments.append(rpn_expression[index - ind])
-                ind -= 1
-            result_of_operation = operation(*function_arguments)
-            rpn_expression = rpn_expression[:index-rpn_expression[index][1]] + [result_of_operation] \
-                + rpn_expression[index + 1:]
-            index = index - number_of_arguments
+            try:
+                operation = module_functions[rpn_expression[index][0]]
+                function_arguments = []
+                number_of_arguments = rpn_expression[index][1]
+                ind = number_of_arguments
+                while ind > 0:
+                    function_arguments.append(rpn_expression[index - ind])
+                    ind -= 1
+                result_of_operation = operation(*function_arguments)
+                rpn_expression = rpn_expression[:index-rpn_expression[index][1]] + [result_of_operation] \
+                    + rpn_expression[index + 1:]
+                index = index - number_of_arguments
+            except Exception:
+                raise Exception('Incorrect arguments for function')
         elif rpn_expression[index] == '-u':  # process unary minuses
-            rpn_expression[index - 1] = -rpn_expression[index - 1]
-            rpn_expression = rpn_expression[:index] + rpn_expression[index + 1:]
-            index -= 1
+            try:
+                rpn_expression[index - 1] = -rpn_expression[index - 1]
+                rpn_expression = rpn_expression[:index] + rpn_expression[index + 1:]
+                index -= 1
+            except Exception:
+                raise Exception('Unary operation failure')
         elif rpn_expression[index] in arithmetical_operations:
-            operation = arithmetical_operations[rpn_expression[index]]
-            result_of_operation = operation(rpn_expression[index-2], rpn_expression[index-1])
-            rpn_expression = rpn_expression[:index - 2] + [result_of_operation] + rpn_expression[index + 1:]
-            index -= 2
+            try:
+                operation = arithmetical_operations[rpn_expression[index]]
+                result_of_operation = operation(rpn_expression[index-2], rpn_expression[index-1])
+                rpn_expression = rpn_expression[:index - 2] + [result_of_operation] + rpn_expression[index + 1:]
+                index -= 2
+            except Exception:
+                raise Exception('Incorrect operands for arithmetical operation')
         elif rpn_expression[index] in comparison_operations:
-            operation = comparison_operations[rpn_expression[index]]
-            result_of_operation = operation(rpn_expression[index-2], rpn_expression[index-1])
-            rpn_expression = rpn_expression[:index - 2] + [result_of_operation] + rpn_expression[index + 1:]
-            index -= 2
+            try:
+                operation = comparison_operations[rpn_expression[index]]
+                result_of_operation = operation(rpn_expression[index-2], rpn_expression[index-1])
+                rpn_expression = rpn_expression[:index - 2] + [result_of_operation] + rpn_expression[index + 1:]
+                index -= 2
+            except Exception:
+                raise Exception('Incorrect operands for comparison operation')
         else:
             index += 1
 
+    if rpn_expression[0] is not bool or rpn_expression[0] is not float:
+        raise Exception('Incorrect expression')
     return rpn_expression.pop()
+
+
+def calculate(string_from_command_line: str):
+    list_expression = parse_expression(string_from_command_line)
+    list_expression = process_negative_numbers(list_expression)
+    return calculate_rpn_expression(expression_to_rpn(list_expression))
 
 
 def main():
@@ -156,10 +174,10 @@ def main():
     args = parser.parse_args()
     string_from_command_line = args.EXPRESSION
 
-    list_expression = parse_expression(string_from_command_line)
-    list_expression = process_negative_numbers(list_expression)
-
-    print(calculate_rpn_expression(expression_to_rpn(list_expression)))
+    try:
+        print(calculate(string_from_command_line))
+    except Exception as e:
+        print('ERROR: {}'.format(e))
 
 
 if __name__ == '__main__':
