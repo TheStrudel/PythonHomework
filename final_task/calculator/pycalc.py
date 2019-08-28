@@ -96,7 +96,7 @@ def expression_to_rpn(expression: list):
             if not operator_stack:
                 raise Exception("ERROR: incorrect brackets")
             operator_stack.pop()
-            if operator_stack and operator_stack[-1][0] in module_functions:
+            if operator_stack and operator_stack[-1][0] in module_functions:  # check if there is function before ')'
                 result_stack.append(operator_stack.pop())
         elif token == ',':  # count number of commas to find number of arguments of function
             while operator_stack and operator_stack[-1] != '(':
