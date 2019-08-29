@@ -114,7 +114,7 @@ def expression_to_rpn(expression: list) -> list:
     return result_stack
 
 
-def calculate_rpn_expression(rpn_expression: list) -> (float, bool):
+def calculate_rpn_expression(rpn_expression: list) -> (float, bool, int):
     """ Calculate an expression in reverse polish notation """
     index = 0
     while len(rpn_expression) > 1:
@@ -157,7 +157,7 @@ def calculate_rpn_expression(rpn_expression: list) -> (float, bool):
         else:
             index += 1
 
-    if not isinstance(rpn_expression[0], (float, bool)):
+    if not isinstance(rpn_expression[0], (float, bool, int)):
         raise Exception('Incorrect expression')
     return rpn_expression.pop()
 
@@ -173,7 +173,6 @@ def main():
     parser.add_argument("EXPRESSION", help="expression to be processed")
     args = parser.parse_args()
     string_from_command_line = args.EXPRESSION
-
     try:
         print(calculate(string_from_command_line))
     except Exception as e:
