@@ -1,10 +1,11 @@
 import argparse
 import re
 import math
+import importlib
 from operator import add, sub, truediv, floordiv, mul, mod, pow, eq, ne, lt, gt, le, ge
 from inspect import getmembers
 
-MODULE_CONSTANTS = {item[0]: item[1] for item in getmembers(math) if isinstance(item[1], float)}
+MODULE_CONSTANTS = {item[0]: item[1] for item in getmembers(math) if isinstance(item[1], (float, int))}
 MODULE_FUNCTIONS = {item[0]: item[1] for item in getmembers(math) if callable(item[1])}
 MODULE_FUNCTIONS.update({'abs': abs, 'round': round})
 
@@ -91,7 +92,7 @@ def expression_to_rpn(expression: list) -> list:
                 result_stack.append(operator_stack.pop())
             operator_stack.append(token)
         elif token in MODULE_CONSTANTS:
-            result_stack.append(getattr(math, token))
+            result_stack.append(MODULE_CONSTANTS[token])
         elif token in MODULE_FUNCTIONS:
             if expression[index+1] != '(':
                 raise Exception("ERROR: no opening bracket after function")
@@ -179,12 +180,36 @@ def calculate(string_from_command_line: str):
     return calculate_rpn_expression(expression_to_rpn(list_expression))
 
 
-def main():
+def parse_modules():
     parser = argparse.ArgumentParser(description='Pure-python command line calculator')
-    parser.add_argument("EXPRESSION", help="expression to be processed")
+    parser.add_argument("EXPRESSION", type=str, help="expression to be processed")
+    parser.add_argument("-m", "--use-modules", nargs='*', dest="MODULE", help="Additional modules")
     args = parser.parse_args()
-    string_from_command_line = args.EXPRESSION
+    return args.EXPRESSION, args.MODULE
+
+
+def add_from_module(module_name: str):
+    """ Update constants and function dictionaries with contents of module """
     try:
+        imported_module = importlib.import_module(module_name)
+        MODULE_CONSTANTS.update({item[0]: item[1] for item in getmembers(imported_module)
+                                 if isinstance(item[1], (float, int))})
+        MODULE_FUNCTIONS.update({item[0]: item[1] for item in getmembers(imported_module) if callable(item[1])})
+    except Exception:
+        raise Exception('Invalid module', module_name)
+
+
+def calculate_for_import_tests(expression: str, module) -> (float, int, bool):
+    add_from_module(module)
+    return calculate(expression)
+
+
+def main():
+    try:
+        string_from_command_line, modules = parse_modules()
+        if modules:
+            for module in modules:
+                add_from_module(module)
         print(calculate(string_from_command_line))
     except Exception as e:
         print('ERROR: {}'.format(e))
