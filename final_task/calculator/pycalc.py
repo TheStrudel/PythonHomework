@@ -8,10 +8,20 @@ MODULE_CONSTANTS = {item[0]: item[1] for item in getmembers(math) if isinstance(
 MODULE_FUNCTIONS = {item[0]: item[1] for item in getmembers(math) if callable(item[1])}
 MODULE_FUNCTIONS.update({'abs': abs, 'round': round})
 
-PRECEDENCE = {'==': 0, '!=': 0, '<': 0, '>': 0, '<=': 0, '>=': 0, '(': 0, ')': 0,
-              '+': 1, '-': 1, '*': 2, '/': 2, '//': 2, '%': 2, '^': 3, '-u': 4}
-ARITHMETICAL_OPERATIONS = {'+': add, '-': sub, '*': mul, '/': truediv, '//': floordiv, '%': mod, '^': pow, '-u': 0}
-COMPARISON_OPERATIONS = {'==': eq, '!=': ne, '<': lt, '>': gt, '<=': le, '>=': ge}
+PRECEDENCE = {
+    '==': 0, '!=': 0, '<': 0, '>': 0,
+    '<=': 0, '>=': 0, '(': 0, ')': 0,
+    '+': 1, '-': 1, '*': 2, '/': 2,
+    '//': 2, '%': 2, '^': 3, '-u': 4
+}
+ARITHMETICAL_OPERATIONS = {
+    '+': add, '-': sub, '*': mul, '/': truediv,
+    '//': floordiv, '%': mod, '^': pow, '-u': 0
+}
+COMPARISON_OPERATIONS = {
+    '==': eq, '!=': ne, '<': lt,
+    '>': gt, '<=': le, '>=': ge
+}
 RIGHT_ASSOCIATIVE = {'^'}
 
 
@@ -30,25 +40,25 @@ def process_negative_numbers(expression: list) -> list:
     sign_counter = 0
     while index < len(expression):
         if expression[index] == '-':
-            # number of minuses and total number of signs encountered before token
+            # Number of minuses and total number of signs encountered before token
             minus_counter += 1
             sign_counter += 1
         elif expression[index] == '+':
             sign_counter += 1
         elif sign_counter != 0:
-            # cut unnecessary signs from expression, leaving only one sign to later be edited ('--+-' -> '-')
+            # Cut unnecessary signs from expression, leaving only one sign to later be edited ('--+-' -> '-')
             expression = expression[:index - sign_counter + 1] + expression[index:]
             index -= sign_counter
             if minus_counter % 2 == 0:  # if number of minuses is even, replace remaining sign with plus
                 expression[index] = '+'
-            else:  # remaining sign could be +, so replace it with '-'
+            else:  # Remaining sign could be +, so replace it with '-'
                 expression[index] = '-'
-            # if there is an arithmetical operation, comma or a bracket before minus, change it to unary
-            if not index or expression[index - 1] in ARITHMETICAL_OPERATIONS or \
-                    expression[index - 1] == '(' or expression[index - 1] == ',':
+            # If there is an arithmetical operation, comma or a bracket before minus, change it to unary
+            if not index or expression[index-1] in ARITHMETICAL_OPERATIONS or \
+                    expression[index-1] == '(' or expression[index-1] == ',':
                 if expression[index] == '-':
                     expression[index] = '-u'
-                else:  # if expression[index] is not minus, than it is an unnecessary plus, e.g. in pow(+1, +2^+2)
+                else:  # If expression[index] is not minus, than it is an unnecessary plus, e.g. in pow(+1, +2^+2)
                     del expression[index]
             sign_counter = 0
             minus_counter = 0
@@ -62,7 +72,7 @@ def expression_to_rpn(expression: list) -> list:
     operator_stack = []
 
     for index, token in enumerate(expression):
-        try:  # check if token is number by attempting to convert it and append to result
+        try:  # Check if token is number by attempting to convert it and append to result
             result_stack.append(float(token))
             continue
         except (OverflowError, ValueError):
@@ -70,8 +80,8 @@ def expression_to_rpn(expression: list) -> list:
 
         if token in ARITHMETICAL_OPERATIONS:
             while operator_stack:
-                if (token in RIGHT_ASSOCIATIVE and not PRECEDENCE[operator_stack[-1]] > PRECEDENCE[token])\
-                        or not PRECEDENCE[operator_stack[-1]] >= PRECEDENCE[token]:
+                if (token in RIGHT_ASSOCIATIVE and not PRECEDENCE[operator_stack[-1]] > PRECEDENCE[token]) or\
+                        not PRECEDENCE[operator_stack[-1]] >= PRECEDENCE[token]:
                     break
                 else:
                     result_stack.append(operator_stack.pop())
@@ -86,7 +96,7 @@ def expression_to_rpn(expression: list) -> list:
             if expression[index+1] != '(':
                 raise Exception("ERROR: no opening bracket after function")
             else:
-                # functions are stored in lists, first element - function name, second - number of arguments
+                # Functions are stored in lists, first element - function name, second - number of arguments
                 operator_stack.append([token, 1])  # by default number of arguments equals 1
         elif token == '(':
             operator_stack.append(token)
@@ -100,7 +110,7 @@ def expression_to_rpn(expression: list) -> list:
             if operator_stack and isinstance(operator_stack[-1], list):  # check if there is a function before ')'
                 result_stack.append(operator_stack.pop())
         elif token == ',':
-            # if token is comma, find the last function in operator stack and increase number of its arguments by 1
+            # If token is comma, find the last function in operator stack and increase number of its arguments by 1
             while operator_stack and operator_stack[-1] != '(':
                 result_stack.append(operator_stack.pop())
             last_function_index = -1
@@ -120,7 +130,7 @@ def calculate_rpn_expression(rpn_expression: list) -> (float, bool, int):
     while len(rpn_expression) > 1:
         if isinstance(rpn_expression[index], list):  # process functions
             try:
-                # add arguments to list and pass them to function
+                # Add arguments to list and pass them to function
                 operation = MODULE_FUNCTIONS[rpn_expression[index][0]]
                 number_of_arguments = rpn_expression[index][1]
                 argument_index = number_of_arguments
@@ -129,29 +139,30 @@ def calculate_rpn_expression(rpn_expression: list) -> (float, bool, int):
                     function_arguments.append(rpn_expression[index - argument_index])
                     argument_index -= 1
                 result_of_operation = operation(*function_arguments)
-                # remove function arguments from stack and put result in their place
+                # Remove function arguments from stack and put result in their place
                 rpn_expression = rpn_expression[:index - number_of_arguments] + [result_of_operation] \
-                    + rpn_expression[index + 1:]
+                    + rpn_expression[index+1:]
                 index -= number_of_arguments
             except Exception:
                 raise Exception('Incorrect arguments for function')
         elif rpn_expression[index] == '-u':  # process unary minuses
             try:
-                rpn_expression[index - 1] = -rpn_expression[index - 1]
+                rpn_expression[index-1] = -rpn_expression[index-1]
                 del rpn_expression[index]
                 index -= 1
             except Exception:
                 raise Exception('Unary operation failure')
         elif rpn_expression[index] in ARITHMETICAL_OPERATIONS or rpn_expression[index] in COMPARISON_OPERATIONS:
-            # find operation corresponding to token and apply it to operands, then cut it and operands from stack
+            # Find operation corresponding to token and apply it to operands, then cut it and operands from stack
             try:
                 if rpn_expression[index] in ARITHMETICAL_OPERATIONS:
                     operation = ARITHMETICAL_OPERATIONS[rpn_expression[index]]
                 else:
                     operation = COMPARISON_OPERATIONS[rpn_expression[index]]
-                result_of_operation = operation(rpn_expression[index-2], rpn_expression[index-1])
-                rpn_expression = rpn_expression[:index - 2] + [result_of_operation] + rpn_expression[index + 1:]
-                index -= 2
+                operation_arguments = (rpn_expression[index-2], rpn_expression[index-1])
+                result_of_operation = operation(*operation_arguments)
+                rpn_expression = rpn_expression[:index-2] + [result_of_operation] + rpn_expression[index+1:]
+                index -= 2  # Two operands and operation are replaced with result, so index is decreased by 2
             except Exception:
                 raise Exception('Incorrect operands for operation')
         else:
