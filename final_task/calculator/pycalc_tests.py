@@ -111,13 +111,13 @@ class TestPycalc(unittest.TestCase):
         self.assertRaises(Exception, calculate, '1+(3*4')
 
     def test_imports(self):
-        self.assertEqual(calculate_for_import_tests('my_exp', 'final_task.calculator.test_module'),
+        self.assertEqual(calculate_for_import_tests('my_exp', 'calculator.test_module'),
                          module_for_tests.my_exp)
-        self.assertEqual(calculate_for_import_tests('some_number+1', 'final_task.calculator.test_module'),
+        self.assertEqual(calculate_for_import_tests('some_number+1', 'calculator.test_module'),
                          module_for_tests.some_number + 1)
-        self.assertEqual(calculate_for_import_tests('my_exp+some_number', 'final_task.calculator.test_module'),
+        self.assertEqual(calculate_for_import_tests('my_exp+some_number', 'calculator.test_module'),
                          module_for_tests.my_exp + module_for_tests.some_number)
-        self.assertEqual(calculate_for_import_tests('add_numbers(1, 2)', 'final_task.calculator.test_module'),
+        self.assertEqual(calculate_for_import_tests('add_numbers(1, 2)', 'calculator.test_module'),
                          module_for_tests.add_numbers(1, 2))
-        self.assertEqual(calculate_for_import_tests('45*-test_number(45)', 'final_task.calculator.test_module'),
+        self.assertEqual(calculate_for_import_tests('45*-test_number(45)', 'calculator.test_module'),
                          45 * -module_for_tests.test_number(45))
